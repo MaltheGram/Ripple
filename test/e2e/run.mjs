@@ -23,6 +23,6 @@ const scratch = mkdtempSync(path.join(tmpdir(), 'br-vscode-'));
 await runTests({
   extensionDevelopmentPath: root,
   extensionTestsPath: path.join(root, 'dist-test/suite.js'),
-  launchArgs: [scratch, '--disable-extensions', '--skip-welcome', '--skip-release-notes', `--user-data-dir=${path.join(scratch, '.user')}`],
+  launchArgs: [scratch, '--disable-extensions', '--disable-gpu', '--skip-welcome', '--skip-release-notes', `--user-data-dir=${path.join(scratch, '.user')}`],
   extensionTestsEnv: { BR_E2E_PAUSE_MS: process.env.BR_E2E_PAUSE_MS ?? '' },
 });
