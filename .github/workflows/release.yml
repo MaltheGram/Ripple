@@ -30,7 +30,12 @@ jobs:
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: xvfb-run -a npm run test:e2e
       - run: npm run package
-      - name: Create GitHub release
+      - name: Create GitHub release (or refresh its .vsix when the tag was moved)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" ripple-*.vsix --title "Ripple $GITHUB_REF_NAME" --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ripple-*.vsix --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" ripple-*.vsix --title "Ripple $GITHUB_REF_NAME" --generate-notes
+          fi
