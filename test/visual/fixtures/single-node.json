@@ -1,0 +1,25 @@
+{
+ "targetId": "t",
+ "title": "formatDate",
+ "warnings": [
+  "formatDate (callers): language server not ready"
+ ],
+ "nodes": [
+  {
+   "id": "t",
+   "name": "formatDate",
+   "container": null,
+   "file": "libs/utils/src/date.ts",
+   "app": "utils",
+   "layer": "util",
+   "line": 3,
+   "role": "target",
+   "changed": true,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  }
+ ],
+ "edges": []
+}

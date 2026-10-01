@@ -1,0 +1,272 @@
+{
+ "targetId": "t",
+ "title": "OrderService.findAll",
+ "warnings": [],
+ "nodes": [
+  {
+   "id": "t",
+   "name": "findAll",
+   "container": "OrderService",
+   "file": "apps/orders-service/src/modules/order/order.service.ts",
+   "app": "orders-service",
+   "layer": "service",
+   "line": 41,
+   "role": "target",
+   "changed": true,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "ctl",
+   "name": "getOrders",
+   "container": "OrderController",
+   "file": "apps/orders-service/src/modules/order/order.controller.ts",
+   "app": "orders-service",
+   "layer": "controller",
+   "line": 77,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   },
+   "detail": "GET /orders"
+  },
+  {
+   "id": "job",
+   "name": "run",
+   "container": "OrderSyncJob",
+   "file": "apps/orders-service/src/jobs/order-sync.job.ts",
+   "app": "orders-service",
+   "layer": "job",
+   "line": 19,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "spec",
+   "name": "should paginate",
+   "container": null,
+   "file": "apps/orders-service/src/modules/order/order.service.spec.ts",
+   "app": "orders-service",
+   "layer": "test",
+   "line": 44,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "ep",
+   "name": "getOrders",
+   "container": "useGetOrdersQuery",
+   "file": "apps/web/src/api/orderApi/orderApi.ts",
+   "app": "web",
+   "layer": "api",
+   "line": 30,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   },
+   "detail": "GET /orders \u2192 orders-service"
+  },
+  {
+   "id": "list",
+   "name": "OrderList",
+   "container": null,
+   "file": "apps/web/src/pages/orders/OrderList.tsx",
+   "app": "web",
+   "layer": "component",
+   "line": 12,
+   "role": "up",
+   "changed": true,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "rail",
+   "name": "useOrderRail",
+   "container": null,
+   "file": "apps/web/src/hooks/useOrderRail.ts",
+   "app": "web",
+   "layer": "hook",
+   "line": 8,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "page",
+   "name": "OrdersPage",
+   "container": null,
+   "file": "apps/web/src/pages/orders/OrdersPage.tsx",
+   "app": "web",
+   "layer": "component",
+   "line": 20,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": true,
+    "down": false
+   }
+  },
+  {
+   "id": "ep2",
+   "name": "getOrders",
+   "container": "useGetOrdersQuery",
+   "file": "apps/admin/src/api/orderApi.ts",
+   "app": "admin",
+   "layer": "api",
+   "line": 14,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   },
+   "detail": "GET /orders \u2192 orders-service"
+  },
+  {
+   "id": "pick",
+   "name": "OrderPicker",
+   "container": null,
+   "file": "apps/admin/src/components/OrderPicker.tsx",
+   "app": "admin",
+   "layer": "component",
+   "line": 9,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": true,
+    "down": false
+   }
+  },
+  {
+   "id": "repo",
+   "name": "findPage",
+   "container": "OrderRepository",
+   "file": "apps/orders-service/src/modules/order/order.repository.ts",
+   "app": "orders-service",
+   "layer": "repository",
+   "line": 12,
+   "role": "down",
+   "changed": true,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "pg",
+   "name": "paginate",
+   "container": null,
+   "file": "libs/nest/src/utils/paginate.ts",
+   "app": "nest",
+   "layer": "util",
+   "line": 5,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": true
+   }
+  },
+  {
+   "id": "acc",
+   "name": "canManage",
+   "container": null,
+   "file": "libs/nest/src/auth/can-manage.ts",
+   "app": "nest",
+   "layer": "util",
+   "line": 3,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": "ctl",
+   "to": "t",
+   "kind": "calls"
+  },
+  {
+   "from": "job",
+   "to": "t",
+   "kind": "calls"
+  },
+  {
+   "from": "spec",
+   "to": "t",
+   "kind": "calls"
+  },
+  {
+   "from": "ep",
+   "to": "ctl",
+   "kind": "http",
+   "label": "GET /orders"
+  },
+  {
+   "from": "ep2",
+   "to": "ctl",
+   "kind": "http",
+   "label": "GET /orders"
+  },
+  {
+   "from": "list",
+   "to": "ep",
+   "kind": "uses",
+   "label": "useGetOrdersQuery"
+  },
+  {
+   "from": "rail",
+   "to": "ep",
+   "kind": "uses",
+   "label": "useGetOrdersQuery"
+  },
+  {
+   "from": "page",
+   "to": "list",
+   "kind": "renders"
+  },
+  {
+   "from": "pick",
+   "to": "ep2",
+   "kind": "uses",
+   "label": "useGetOrdersQuery"
+  },
+  {
+   "from": "t",
+   "to": "repo",
+   "kind": "calls"
+  },
+  {
+   "from": "repo",
+   "to": "pg",
+   "kind": "calls"
+  },
+  {
+   "from": "t",
+   "to": "acc",
+   "kind": "calls"
+  }
+ ]
+}

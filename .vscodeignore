@@ -1,0 +1,13 @@
+src/**
+test/**
+node_modules/**
+.vscode/**
+*.md
+!README.md
+tsconfig.json
+esbuild.mjs
+**/*.map
+dist-test/**
+!media/**
+.github/**
+.gitignore

@@ -1,0 +1,1055 @@
+{
+  "name": "ripple",
+  "displayName": "Ripple",
+  "description": "Review GitLab merge requests in VS Code with real code navigation, filters, noise detection and focus tools.",
+  "version": "0.1.0",
+  "publisher": "malthegram",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MaltheGram/Ripple.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MaltheGram/Ripple/issues"
+  },
+  "homepage": "https://github.com/MaltheGram/Ripple#readme",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri",
+    "onAuthenticationRequest:ripple-gitlab"
+  ],
+  "contributes": {
+    "authentication": [
+      {
+        "id": "ripple-gitlab",
+        "label": "GitLab (Ripple)"
+      }
+    ],
+    "configuration": {
+      "title": "Ripple",
+      "properties": {
+        "ripple.gitlab.baseUrl": {
+          "type": "string",
+          "default": "https://gitlab.com",
+          "description": "GitLab instance URL. User settings only (a repository cannot change where your token is sent).",
+          "scope": "application"
+        },
+        "ripple.gitlab.clientId": {
+          "type": "string",
+          "default": "",
+          "description": "Application ID of your GitLab OAuth app (not a secret; see README → Signing in). Empty = sign in with a personal access token. User setting only.",
+          "scope": "application"
+        },
+        "ripple.storageRoot": {
+          "type": "string",
+          "default": "~/.ripple",
+          "description": "Where repo clones and MR worktrees are kept.",
+          "scope": "machine"
+        },
+        "ripple.trivialGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/package-lock.json",
+            "**/pnpm-lock.yaml",
+            "**/yarn.lock",
+            "**/go.sum",
+            "**/*.snap",
+            "**/__snapshots__/**",
+            "**/*.min.js",
+            "**/*.generated.*",
+            "**/dist/**"
+          ],
+          "description": "Files matching these globs are marked trivial (noise).",
+          "scope": "application"
+        },
+        "ripple.gitlab.groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Groups whose open MRs are listed under \"All open in …\" (e.g. [\"acme\"]). Empty = your top-level groups.",
+          "scope": "application"
+        },
+        "ripple.ai.model": {
+          "type": "string",
+          "default": "sonnet",
+          "description": "Default model in the AI options menu (claude --model alias).",
+          "scope": "application"
+        },
+        "ripple.ai.fastModel": {
+          "type": "string",
+          "default": "haiku",
+          "description": "Claude model alias for quick, bulk tasks.",
+          "scope": "application"
+        },
+        "ripple.ai.claudePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Claude Code CLI. Empty = find `claude` on PATH or in common install locations. Machine setting only (a repository cannot change what gets executed).",
+          "scope": "machine"
+        },
+        "ripple.ai.maxInputTokens": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 2000,
+          "scope": "application",
+          "description": "Default \"Max tokens\" in the AI options menu. Largest diffs are left out first."
+        },
+        "ripple.hoverHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "On hover over a name whose definition this MR changed, show \"Affected by this MR\" with links to the change and to Explain. Uses the language server only (no AI)."
+        },
+        "ripple.traceCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show \"Trace callers & callees\" above every function the MR changed."
+        },
+        "ripple.checkForUpdates": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Check GitHub Releases once a day for a newer Ripple version and offer to install it."
+        },
+        "ripple.installDependencies": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "never"
+          ],
+          "default": "ask",
+          "description": "Offer (once per project) to install dependencies in the review checkout so go to definition works into node_modules. Never offered for MRs that change package manifests, lockfiles or package-manager config. Lifecycle scripts and pnpm hooks are off."
+        },
+        "ripple.commentLabels": {
+          "type": "boolean",
+          "default": true,
+          "description": "Expand Conventional Comments shorthands at the start of a comment: nit:, q:, s:, i:, b: (blocking), p:, t:, c: → **nit:** …"
+        },
+        "ripple.coverage.paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "coverage/{dir}/lcov.info",
+            "coverage/lcov.info"
+          ],
+          "description": "Where to find lcov reports in test jobs' artifacts. {dir} is the app/lib folder the MR touches, e.g. apps/web.",
+          "scope": "application"
+        },
+        "ripple.coverage.decorate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mark changed lines that no test ran (from the MR pipeline's coverage report) in diffs."
+        },
+        "ripple.historyHover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Hover a changed line (or an old-side line) to see when the code it replaces last changed, by whom and in which MR (GitLab blame)."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ripple",
+          "title": "Ripple",
+          "icon": "$(git-pull-request)"
+        }
+      ]
+    },
+    "views": {
+      "ripple": [
+        {
+          "id": "ripple.mrs",
+          "name": "Merge Requests"
+        },
+        {
+          "id": "ripple.files",
+          "name": "Review"
+        },
+        {
+          "id": "ripple.explain",
+          "name": "Explain",
+          "when": "ripple.active"
+        },
+        {
+          "id": "ripple.comments",
+          "name": "Comments",
+          "when": "ripple.active"
+        },
+        {
+          "id": "ripple.impact",
+          "name": "Impact",
+          "when": "ripple.active"
+        },
+        {
+          "id": "ripple.crossService",
+          "name": "Cross-service",
+          "when": "ripple.active"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "ripple.mrs",
+        "contents": "Sign in to see your merge requests.\n[Sign in to GitLab](command:ripple.signIn)"
+      },
+      {
+        "view": "ripple.files",
+        "contents": "Pick a merge request above to start reviewing.\n[Open MR by URL…](command:ripple.openMr)"
+      },
+      {
+        "view": "ripple.explain",
+        "contents": "How does this MR affect a piece of code?\nSelect code in a diff or any file of the MR checkout (or put the cursor in a function), then press Alt+E.\n[Explain Selection](command:ripple.ai.explain)\n[Explain Whole File](command:ripple.ai.explainFile)\nEach explanation opens as a document and is listed here."
+      },
+      {
+        "view": "ripple.crossService",
+        "contents": "Find other services and repos that use the DTOs, types, API routes and events this MR changes (GitLab code search in your group).\n[Scan Other Repositories](command:ripple.crossService.scan)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ripple.reviewMr",
+        "title": "Review Merge Request",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.refreshMrs",
+        "title": "Refresh Merge Requests",
+        "category": "Ripple",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "ripple.openMrItemInGitLab",
+        "title": "Open in GitLab",
+        "category": "Ripple",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "ripple.closeReview",
+        "title": "Close Review",
+        "category": "Ripple",
+        "icon": "$(close)"
+      },
+      {
+        "command": "ripple.signIn",
+        "title": "Sign in to GitLab",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.signOut",
+        "title": "Sign out of GitLab",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.openMr",
+        "title": "Open Merge Request by URL…",
+        "category": "Ripple",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "ripple.refresh",
+        "title": "Refresh",
+        "category": "Ripple",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "ripple.filter",
+        "title": "Filter Files…",
+        "category": "Ripple",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "ripple.sort",
+        "title": "Sort Files…",
+        "category": "Ripple",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "ripple.toggleTrivial",
+        "title": "Show/Hide Trivial Files",
+        "category": "Ripple",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "ripple.markTrivialViewed",
+        "title": "Mark All Trivial Files Viewed",
+        "category": "Ripple",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "ripple.focusGroup",
+        "title": "Focus on This Group",
+        "category": "Ripple",
+        "icon": "$(target)"
+      },
+      {
+        "command": "ripple.clearFocus",
+        "title": "Clear Focus",
+        "category": "Ripple",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "ripple.nextUnviewed",
+        "title": "Open Next Unviewed File",
+        "category": "Ripple",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "ripple.markViewedAndNext",
+        "title": "Mark Viewed & Open Next",
+        "category": "Ripple",
+        "icon": "$(check)"
+      },
+      {
+        "command": "ripple.openFile",
+        "title": "Open Diff",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.openInGitLab",
+        "title": "Open MR in GitLab",
+        "category": "Ripple",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "ripple.submitReview",
+        "title": "Submit Review (publish drafts)",
+        "category": "Ripple",
+        "icon": "$(send)"
+      },
+      {
+        "command": "ripple.approve",
+        "title": "Approve MR",
+        "category": "Ripple",
+        "icon": "$(pass)"
+      },
+      {
+        "command": "ripple.unapprove",
+        "title": "Revoke Approval",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.cleanupWorktrees",
+        "title": "Remove Worktrees of Closed MRs",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.comment.addDraft",
+        "title": "Add to Review",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.comment.postNow",
+        "title": "Comment Now",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.comment.resolve",
+        "title": "Resolve Thread",
+        "category": "Ripple",
+        "icon": "$(check)"
+      },
+      {
+        "command": "ripple.comment.unresolve",
+        "title": "Unresolve Thread",
+        "category": "Ripple",
+        "icon": "$(issue-reopened)"
+      },
+      {
+        "command": "ripple.comment.deleteDraft",
+        "title": "Delete Draft",
+        "category": "Ripple",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "ripple.openOverview",
+        "title": "Open MR Overview & General Comments",
+        "category": "Ripple",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "ripple.goToComment",
+        "title": "Go to Comment",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.ai.analyze",
+        "title": "Generate AI Review (summary, review order, risks)…",
+        "category": "Ripple",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "ripple.ai.explain",
+        "title": "AI: Explain (vs this MR)",
+        "category": "Ripple",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "ripple.ai.suggestComments",
+        "title": "AI: Suggest Review Comments for This File",
+        "category": "Ripple",
+        "icon": "$(comment-draft)"
+      },
+      {
+        "command": "ripple.ai.postSummary",
+        "title": "AI: Post Summary to MR",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.groupBy",
+        "title": "Group Files By…",
+        "category": "Ripple",
+        "icon": "$(layers)"
+      },
+      {
+        "command": "ripple.comment.acceptSuggestion",
+        "title": "Accept as Draft",
+        "category": "Ripple",
+        "icon": "$(check)"
+      },
+      {
+        "command": "ripple.comment.discardSuggestion",
+        "title": "Discard Suggestion",
+        "category": "Ripple",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "ripple.ai.options",
+        "title": "AI Options (model, depth, max tokens, focus)…",
+        "category": "Ripple",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "ripple.ai.explainToComment",
+        "title": "AI: Add Current Explanation as Review Comment",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.ai.explainFile",
+        "title": "AI: Explain What This MR Does to This File",
+        "category": "Ripple",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "ripple.ai.explainAsk",
+        "title": "AI: Ask a Follow-up About the Current Explanation…",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.revealChange",
+        "title": "Open Change",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.explain.open",
+        "title": "Open Explanation",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.explain.ask",
+        "title": "Ask a Follow-up…",
+        "category": "Ripple",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "ripple.explain.comment",
+        "title": "Add as Review Comment",
+        "category": "Ripple",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "ripple.explain.remove",
+        "title": "Remove from List",
+        "category": "Ripple",
+        "icon": "$(close)"
+      },
+      {
+        "command": "ripple.explain.clear",
+        "title": "Clear Explanations",
+        "category": "Ripple",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "ripple.crossService.scan",
+        "title": "Scan Cross-service Impact",
+        "category": "Ripple",
+        "icon": "$(search)"
+      },
+      {
+        "command": "ripple.crossService.openContract",
+        "title": "Open Declaration",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.crossService.openUsage",
+        "title": "Open in GitLab",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.crossService.comment",
+        "title": "Add as Review Comment",
+        "category": "Ripple",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "ripple.trace",
+        "title": "Trace Callers & Callees",
+        "category": "Ripple",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "ripple.checkForUpdates",
+        "title": "Check for Updates",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.installDependencies",
+        "title": "Install Dependencies in Review Checkout",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.nextThread",
+        "title": "Go to Next Unresolved Thread",
+        "category": "Ripple",
+        "icon": "$(comment-unresolved)"
+      },
+      {
+        "command": "ripple.toggleSinceReview",
+        "title": "Show Only Changes Since My Review",
+        "category": "Ripple",
+        "icon": "$(history)"
+      },
+      {
+        "command": "ripple.markReviewed",
+        "title": "Mark This Version as Reviewed",
+        "category": "Ripple"
+      },
+      {
+        "command": "ripple.compareWithVersion",
+        "title": "Compare With Version…",
+        "category": "Ripple",
+        "icon": "$(versions)"
+      },
+      {
+        "command": "ripple.gettingStarted",
+        "title": "Get Started",
+        "category": "Ripple",
+        "icon": "$(book)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ripple.nextUnviewed",
+        "key": "alt+n",
+        "when": "ripple.active"
+      },
+      {
+        "command": "ripple.markViewedAndNext",
+        "key": "alt+shift+n",
+        "when": "ripple.active"
+      },
+      {
+        "command": "ripple.ai.explain",
+        "key": "alt+e",
+        "when": "ripple.active && editorTextFocus"
+      },
+      {
+        "command": "ripple.trace",
+        "key": "alt+t",
+        "when": "ripple.active && editorTextFocus"
+      },
+      {
+        "command": "ripple.nextThread",
+        "key": "alt+u",
+        "when": "ripple.active"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "ripple.refreshMrs",
+          "when": "view == ripple.mrs",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ripple.openMr",
+          "when": "view == ripple.mrs",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ripple.signOut",
+          "when": "view == ripple.mrs",
+          "group": "more@1"
+        },
+        {
+          "command": "ripple.nextUnviewed",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ripple.filter",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ripple.sort",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@3"
+        },
+        {
+          "command": "ripple.toggleTrivial",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@4"
+        },
+        {
+          "command": "ripple.submitReview",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@5"
+        },
+        {
+          "command": "ripple.refresh",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@6"
+        },
+        {
+          "command": "ripple.markTrivialViewed",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@1"
+        },
+        {
+          "command": "ripple.clearFocus",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@2"
+        },
+        {
+          "command": "ripple.approve",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@3"
+        },
+        {
+          "command": "ripple.unapprove",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@4"
+        },
+        {
+          "command": "ripple.openInGitLab",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@5"
+        },
+        {
+          "command": "ripple.closeReview",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@9"
+        },
+        {
+          "command": "ripple.openOverview",
+          "when": "view == ripple.comments",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ripple.refresh",
+          "when": "view == ripple.comments",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ripple.ai.analyze",
+          "when": "view == ripple.files && ripple.active",
+          "group": "navigation@0"
+        },
+        {
+          "command": "ripple.groupBy",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@0"
+        },
+        {
+          "command": "ripple.ai.postSummary",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@7"
+        },
+        {
+          "command": "ripple.ai.options",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@8"
+        },
+        {
+          "command": "ripple.ai.explain",
+          "when": "view == ripple.explain",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ripple.ai.explainFile",
+          "when": "view == ripple.explain",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ripple.explain.clear",
+          "when": "view == ripple.explain && ripple.hasExplanations",
+          "group": "navigation@3"
+        },
+        {
+          "command": "ripple.crossService.scan",
+          "when": "view == ripple.crossService && ripple.crossServiceScanned",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ripple.installDependencies",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@10"
+        },
+        {
+          "command": "ripple.nextThread",
+          "when": "view == ripple.comments",
+          "group": "navigation@0"
+        },
+        {
+          "command": "ripple.compareWithVersion",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@0"
+        },
+        {
+          "command": "ripple.markReviewed",
+          "when": "view == ripple.files && ripple.active",
+          "group": "more@0"
+        },
+        {
+          "command": "ripple.gettingStarted",
+          "when": "view == ripple.mrs",
+          "group": "more@9"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "ripple.focusGroup",
+          "when": "view == ripple.files && viewItem == group",
+          "group": "inline"
+        },
+        {
+          "command": "ripple.openMrItemInGitLab",
+          "when": "view == ripple.mrs && viewItem == mr",
+          "group": "inline"
+        },
+        {
+          "command": "ripple.explain.ask",
+          "when": "view == ripple.explain && viewItem == explanation",
+          "group": "inline@1"
+        },
+        {
+          "command": "ripple.explain.comment",
+          "when": "view == ripple.explain && viewItem == explanation",
+          "group": "inline@2"
+        },
+        {
+          "command": "ripple.explain.remove",
+          "when": "view == ripple.explain && viewItem == explanation",
+          "group": "inline@3"
+        },
+        {
+          "command": "ripple.explain.comment",
+          "when": "view == ripple.explain && (viewItem == explainEffect || viewItem == explainCheck)",
+          "group": "inline@1"
+        },
+        {
+          "command": "ripple.crossService.comment",
+          "when": "view == ripple.crossService && viewItem == contractUsed",
+          "group": "inline@1"
+        },
+        {
+          "command": "ripple.trace",
+          "when": "view == ripple.impact && viewItem == impactSymbol",
+          "group": "inline"
+        }
+      ],
+      "comments/commentThread/context": [
+        {
+          "command": "ripple.comment.addDraft",
+          "when": "commentController == ripple",
+          "group": "inline@1"
+        },
+        {
+          "command": "ripple.comment.postNow",
+          "when": "commentController == ripple",
+          "group": "inline@2"
+        }
+      ],
+      "comments/commentThread/title": [
+        {
+          "command": "ripple.comment.resolve",
+          "when": "commentController == ripple && commentThread == unresolved",
+          "group": "inline"
+        },
+        {
+          "command": "ripple.comment.unresolve",
+          "when": "commentController == ripple && commentThread == resolved",
+          "group": "inline"
+        },
+        {
+          "command": "ripple.comment.acceptSuggestion",
+          "when": "commentController == ripple && commentThread == suggestion",
+          "group": "inline@1"
+        },
+        {
+          "command": "ripple.comment.discardSuggestion",
+          "when": "commentController == ripple && commentThread == suggestion",
+          "group": "inline@2"
+        }
+      ],
+      "comments/comment/title": [
+        {
+          "command": "ripple.comment.deleteDraft",
+          "when": "commentController == ripple && comment == draft",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ripple.openFile",
+          "when": "false"
+        },
+        {
+          "command": "ripple.focusGroup",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.addDraft",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.postNow",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.resolve",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.unresolve",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.deleteDraft",
+          "when": "false"
+        },
+        {
+          "command": "ripple.reviewMr",
+          "when": "false"
+        },
+        {
+          "command": "ripple.openMrItemInGitLab",
+          "when": "false"
+        },
+        {
+          "command": "ripple.goToComment",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.acceptSuggestion",
+          "when": "false"
+        },
+        {
+          "command": "ripple.comment.discardSuggestion",
+          "when": "false"
+        },
+        {
+          "command": "ripple.revealChange",
+          "when": "false"
+        },
+        {
+          "command": "ripple.explain.open",
+          "when": "false"
+        },
+        {
+          "command": "ripple.explain.remove",
+          "when": "false"
+        },
+        {
+          "command": "ripple.crossService.openContract",
+          "when": "false"
+        },
+        {
+          "command": "ripple.crossService.openUsage",
+          "when": "false"
+        },
+        {
+          "command": "ripple.crossService.comment",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "ripple.trace",
+          "when": "ripple.active && resourceScheme == file",
+          "group": "Ripple@0"
+        },
+        {
+          "command": "ripple.ai.explain",
+          "when": "ripple.active && (resourceScheme == file || resourceScheme == ripple)",
+          "group": "Ripple@1"
+        },
+        {
+          "command": "ripple.ai.suggestComments",
+          "when": "ripple.active && resourceScheme == file",
+          "group": "Ripple@2"
+        },
+        {
+          "command": "ripple.ai.explainFile",
+          "when": "ripple.active && resourceScheme == file",
+          "group": "Ripple@3"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "ripple.ai.suggestComments",
+          "when": "ripple.active && isInDiffEditor && resourceScheme == file",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "walkthroughs": [
+      {
+        "id": "gettingStarted",
+        "title": "Get started with Ripple",
+        "description": "Review GitLab merge requests in VS Code: navigation, focus, traces, comments and optional AI.",
+        "steps": [
+          {
+            "id": "signIn",
+            "title": "Sign in to GitLab",
+            "description": "Work as yourself: comments, drafts and approvals use your GitLab account.\n[Sign in to GitLab](command:ripple.signIn)",
+            "media": {
+              "markdown": "media/walkthrough/sign-in.md"
+            },
+            "completionEvents": [
+              "onCommand:ripple.signIn"
+            ]
+          },
+          {
+            "id": "openMr",
+            "title": "Pick a merge request",
+            "description": "Choose an MR from the Merge Requests list; it's checked out without touching your clones.\n[Show Merge Requests](command:workbench.view.extension.ripple)",
+            "media": {
+              "markdown": "media/walkthrough/open-mr.md"
+            },
+            "completionEvents": [
+              "onContext:ripple.active"
+            ]
+          },
+          {
+            "id": "review",
+            "title": "Review 200 files without losing focus",
+            "description": "Filters, noise detection, suggested order, progress, pipeline and coverage. Alt+N moves to the next unviewed file.\n[Open Next Unviewed File](command:ripple.nextUnviewed)",
+            "media": {
+              "markdown": "media/walkthrough/review-list.md"
+            },
+            "completionEvents": [
+              "onCommand:ripple.nextUnviewed",
+              "onCommand:ripple.markViewedAndNext"
+            ]
+          },
+          {
+            "id": "comments",
+            "title": "Comment and submit",
+            "description": "Drafts, multi-line comments, labels like nit: and q:, Alt+U for the next unresolved thread, then Submit Review.\n[Next Unresolved Thread](command:ripple.nextThread)",
+            "media": {
+              "markdown": "media/walkthrough/comments.md"
+            },
+            "completionEvents": [
+              "onCommand:ripple.submitReview",
+              "onCommand:ripple.comment.addDraft",
+              "onCommand:ripple.nextThread"
+            ]
+          },
+          {
+            "id": "trace",
+            "title": "Trace a changed function",
+            "description": "See who calls it and what it calls, across React, HTTP and services. Alt+T at the cursor.\n[Trace Function at Cursor](command:ripple.trace)",
+            "media": {
+              "markdown": "media/walkthrough/trace.md"
+            },
+            "completionEvents": [
+              "onCommand:ripple.trace"
+            ]
+          },
+          {
+            "id": "ai",
+            "title": "Explain code and use AI (optional)",
+            "description": "Alt+E explains code against the MR. AI review, suggestions and follow-ups use your own Claude login.\n[AI Options](command:ripple.ai.options)",
+            "media": {
+              "markdown": "media/walkthrough/explain-ai.md"
+            },
+            "completionEvents": [
+              "onCommand:ripple.ai.explain",
+              "onCommand:ripple.ai.analyze"
+            ]
+          },
+          {
+            "id": "crossService",
+            "title": "Cross-service impact",
+            "description": "Find other repos using the DTOs, routes and events this MR changes.\n[Scan Cross-service Impact](command:ripple.crossService.scan)",
+            "media": {
+              "markdown": "media/walkthrough/cross-service.md"
+            },
+            "completionEvents": [
+              "onCommand:ripple.crossService.scan"
+            ]
+          },
+          {
+            "id": "tips",
+            "title": "Tips",
+            "description": "Dependencies for navigation, line history, comparing versions and timings.\n[Open Settings](command:workbench.action.openSettings?%22Ripple%22)",
+            "media": {
+              "markdown": "media/walkthrough/tips.md"
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.openSettings"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc",
+    "test": "vitest run",
+    "package": "node esbuild.mjs --production && vsce package --no-dependencies --no-rewrite-relative-links",
+    "test:e2e": "npm run build && node test/e2e/run.mjs",
+    "test:visual": "npm run build && node test/visual/run.mjs"
+  },
+  "dependencies": {
+    "elkjs": "^0.12.0",
+    "minimatch": "^10.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "pixelmatch": "^7.2.0",
+    "playwright-core": "^1.63.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": false
+  }
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg: var(--vscode-editor-background, #1e1e1e);
+    --fg: var(--vscode-editor-foreground, #d4d4d4);
+    --muted: var(--vscode-descriptionForeground, #9d9d9d);
+    --border: var(--vscode-panel-border, #3c3c3c);
+    --card: var(--vscode-editorWidget-background, #252526);
+    --card-border: var(--vscode-editorWidget-border, #454545);
+    --accent: var(--vscode-focusBorder, #007fd4);
+    --changed: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+    --added: var(--vscode-gitDecoration-addedResourceForeground, #73c991);
+    --deleted: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+    --input-bg: var(--vscode-input-background, #3c3c3c);
+    --input-fg: var(--vscode-input-foreground, #cccccc);
+    --input-border: var(--vscode-input-border, transparent);
+    --btn-bg: var(--vscode-button-secondaryBackground, #3a3d41);
+    --btn-fg: var(--vscode-button-secondaryForeground, #cccccc);
+    --btn-hover: var(--vscode-button-secondaryHoverBackground, #45494e);
+    --primary-bg: var(--vscode-button-background, #0e639c);
+    --primary-fg: var(--vscode-button-foreground, #ffffff);
+    --primary-hover: var(--vscode-button-hoverBackground, #1177bb);
+    --mono: var(--vscode-editor-font-family, ui-monospace, Menlo, monospace);
+    /* layer colours */
+    --l-frontend: var(--vscode-charts-blue, #3794ff);
+    --l-api: var(--vscode-charts-purple, #b180d7);
+    --l-controller: var(--vscode-charts-orange, #d18616);
+    --l-service: var(--vscode-charts-green, #89d185);
+    --l-data: var(--vscode-charts-yellow, #cca700);
+    --l-test: var(--vscode-descriptionForeground, #9d9d9d);
+    --l-other: var(--vscode-editor-foreground, #d4d4d4);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg);
+         font-family: var(--vscode-font-family, -apple-system, system-ui, sans-serif); font-size: 12px; }
+  button { font: inherit; color: var(--btn-fg); background: var(--btn-bg); border: none; border-radius: 3px;
+           padding: 4px 9px; cursor: pointer; white-space: nowrap; }
+  button:hover { background: var(--btn-hover); }
+  button.primary { background: var(--primary-bg); color: var(--primary-fg); }
+  button.primary:hover { background: var(--primary-hover); }
+  button.icon { padding: 4px 7px; min-width: 26px; }
+  button[aria-pressed="true"] { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+  header { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .title { font-weight: 600; font-family: var(--mono); }
+  .stats { color: var(--muted); }
+  .spacer { flex: 1; }
+  .group { display: flex; gap: 2px; align-items: center; }
+  .search { position: relative; }
+  .search input { width: 170px; padding: 4px 8px 4px 24px; background: var(--input-bg); color: var(--input-fg);
+                  border: 1px solid var(--input-border); border-radius: 3px; font: inherit; outline: none; }
+  .search input:focus { border-color: var(--accent); }
+  .search::before { content: "⌕"; position: absolute; left: 8px; top: 3px; color: var(--muted); font-size: 13px; }
+  .sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
+
+  main { flex: 1; display: flex; min-height: 0; position: relative; }
+  #viewport { flex: 1; position: relative; overflow: hidden; cursor: grab;
+              background-image: radial-gradient(color-mix(in srgb, var(--fg) 9%, transparent) 1px, transparent 1px);
+              background-size: 22px 22px; }
+  #viewport.panning { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+
+  /* app / service boxes */
+  .app { position: absolute; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--fg) 3%, transparent); }
+  .app-label { position: absolute; top: 7px; left: 12px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); white-space: nowrap; }
+
+  /* edges */
+  .edge { fill: none; stroke: color-mix(in srgb, var(--fg) 30%, transparent); stroke-width: 1.4; transition: opacity .15s; }
+  .edge.http { stroke: var(--l-api); stroke-width: 1.8; stroke-dasharray: 6 4; }
+  .edge.uses { stroke: var(--l-frontend); stroke-dasharray: 3 3; }
+  .edge.renders { stroke: var(--l-frontend); }
+  .edge.hot { stroke: var(--accent); stroke-width: 2.4; }
+  .edge.dim { opacity: .1; }
+  .edge-label { position: absolute; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 10px; padding: 1px 6px; border-radius: 8px;
+                background: var(--bg); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; pointer-events: none; }
+  .edge-label.http { color: var(--l-api); border-color: color-mix(in srgb, var(--l-api) 50%, transparent); }
+  .edge-label.dim { opacity: .15; }
+
+  /* nodes */
+  .node { position: absolute; width: 240px; background: var(--card); border: 1px solid var(--card-border); border-radius: 7px;
+          padding: 7px 10px 7px 13px; cursor: pointer; transition: opacity .15s, box-shadow .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .node::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 7px 0 0 7px; background: var(--k); }
+  .node:hover { box-shadow: 0 0 0 1px var(--k), 0 4px 14px rgba(0,0,0,.35); }
+  .node.target { box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .node.selected { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px rgba(0,0,0,.4); }
+  .node.hit { box-shadow: 0 0 0 2px var(--changed); }
+  .node.dim { opacity: .2; }
+  .node.external { border-style: dashed; background: transparent; }
+  .node.viewed .name::after { content: " ✓"; color: var(--added); }
+  .row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .layer { flex: none; font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--k); }
+  .tag { flex: none; font-size: 10px; padding: 0 6px; border-radius: 8px; line-height: 16px; }
+  .tag.changed { color: var(--changed); background: color-mix(in srgb, var(--changed) 18%, transparent); }
+  .tag.tracing { color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .name { font-family: var(--mono); font-size: 13px; font-weight: 600; margin: 3px 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); }
+  .detail { color: var(--l-api); font-size: 10.5px; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+  .exp { position: absolute; top: 50%; width: 18px; height: 18px; margin-top: -9px; padding: 0; border-radius: 50%;
+         font-size: 12px; line-height: 18px; text-align: center; opacity: .35; transition: opacity .12s;
+         background: var(--primary-bg); color: var(--primary-fg); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+  .exp:hover { background: var(--primary-hover); opacity: 1; }
+  .exp.l { left: -10px; } .exp.r { right: -10px; }
+  .node:hover .exp, .node.selected .exp { opacity: 1; }
+  .L-frontend { --k: var(--l-frontend); } .L-api { --k: var(--l-api); } .L-controller { --k: var(--l-controller); }
+  .L-service { --k: var(--l-service); } .L-data { --k: var(--l-data); } .L-test { --k: var(--l-test); } .L-other { --k: var(--l-other); }
+
+  /* details */
+  aside { width: 300px; flex: none; border-left: 1px solid var(--border); overflow-y: auto; padding: 12px 14px; display: none; background: var(--bg); }
+  aside.open { display: block; }
+  aside h2 { font-family: var(--mono); font-size: 14px; margin: 6px 0 2px; word-break: break-all; }
+  aside .sub { color: var(--muted); margin-bottom: 4px; word-break: break-all; font-family: var(--mono); font-size: 11px; }
+  aside .actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+  aside h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; display: flex; justify-content: space-between; align-items: center; }
+  aside ul { list-style: none; margin: 0; padding: 0; }
+  aside li { padding: 4px 6px; border-radius: 4px; cursor: pointer; display: flex; gap: 6px; align-items: center; }
+  aside li:hover { background: var(--btn-bg); }
+  aside li .n { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  aside li .t { color: var(--muted); font-size: 11px; }
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--k); }
+  .close { float: right; }
+  .empty-list { color: var(--muted); padding: 4px 6px; }
+
+  #overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  #overlay .box { pointer-events: auto; text-align: center; color: var(--muted); max-width: 440px; line-height: 1.6; }
+  #overlay .box b { color: var(--fg); }
+  .spinner { width: 22px; height: 22px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+             animation: spin .8s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .legend { position: absolute; left: 10px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; padding: 5px 10px; border-radius: 6px; max-width: calc(100% - 20px);
+            background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid var(--border); color: var(--muted); font-size: 11px; }
+  .legend span { display: flex; gap: 5px; align-items: center; }
+  .legend .sw { width: 10px; height: 10px; border-radius: 3px; background: var(--k); }
+  .legend .ln { width: 18px; height: 0; border-top: 2px solid color-mix(in srgb, var(--fg) 40%, transparent); }
+  .legend .ln.http { border-top: 2px dashed var(--l-api); }
+  .legend .ln.uses { border-top: 2px dotted var(--l-frontend); }
+</style>
+</head>
+<body>
+<header>
+  <span class="title" id="title">Trace</span>
+  <span class="stats" id="stats"></span>
+  <span class="spacer"></span>
+  <label class="search"><input id="search" placeholder="Find…  /" spellcheck="false"></label>
+  <button id="tests" aria-pressed="true" title="Show test files that call this code">Tests</button>
+  <span class="sep"></span>
+  <div class="group">
+    <button class="icon" id="zoomOut" title="Zoom out (−)">−</button>
+    <button class="icon" id="fit" title="Fit (F)">⤢</button>
+    <button class="icon" id="zoomIn" title="Zoom in (+)">+</button>
+  </div>
+  <button id="mermaid" title="Copy as Mermaid for the MR description">Copy Mermaid</button>
+</header>
+<main>
+  <div id="viewport">
+    <div id="world"><svg id="edges"></svg></div>
+    <div id="overlay"><div class="box"><div class="spinner"></div><div>Tracing…</div></div></div>
+    <div class="legend">
+      <span class="L-frontend"><i class="sw"></i>component / hook</span>
+      <span class="L-api"><i class="sw"></i>API endpoint</span>
+      <span class="L-controller"><i class="sw"></i>controller</span>
+      <span class="L-service"><i class="sw"></i>service</span>
+      <span class="L-data"><i class="sw"></i>repository / entity / job</span>
+      <span class="L-test"><i class="sw"></i>test</span>
+      <span><i class="ln"></i>calls</span>
+      <span><i class="ln uses"></i>uses hook</span>
+      <span><i class="ln http"></i>HTTP</span>
+    </div>
+  </div>
+  <aside id="details"></aside>
+</main>
+<script nonce="{{NONCE}}" src="{{SCRIPT}}"></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+{
+ "targetId": "t",
+ "title": "DashboardSection",
+ "warnings": [],
+ "nodes": [
+  {
+   "id": "t",
+   "name": "DashboardSection",
+   "container": null,
+   "file": "apps/web/src/dashboard/DashboardSection.tsx",
+   "app": "web",
+   "layer": "component",
+   "line": 20,
+   "role": "target",
+   "changed": true,
+   "more": {
+    "up": false,
+    "down": true
+   }
+  },
+  {
+   "id": "page",
+   "name": "OrderPage",
+   "container": null,
+   "file": "apps/web/src/pages/OrderPage.tsx",
+   "app": "web",
+   "layer": "component",
+   "line": 8,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "root",
+   "name": "RootRouter.tsx (top level)",
+   "container": null,
+   "file": "apps/web/src/RootRouter.tsx",
+   "app": "web",
+   "layer": "other",
+   "line": 1,
+   "role": "up",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   }
+  },
+  {
+   "id": "rail",
+   "name": "DashboardRail",
+   "container": null,
+   "file": "apps/web/src/dashboard/DashboardRail.tsx",
+   "app": "web",
+   "layer": "component",
+   "line": 5,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": true
+   }
+  },
+  {
+   "id": "e1",
+   "name": "getOrderRail",
+   "container": "useGetOrderRailQuery",
+   "file": "apps/web/src/api/dashboardEndpoints.ts",
+   "app": "web",
+   "layer": "api",
+   "line": 31,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   },
+   "detail": "GET /orders/rail \u2192 orders-service"
+  },
+  {
+   "id": "e2",
+   "name": "inviteUser",
+   "container": "useInviteUserMutation",
+   "file": "apps/web/src/api/accountApi.ts",
+   "app": "web",
+   "layer": "api",
+   "line": 27,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   },
+   "detail": "POST /realms/acme/api/invite-user \u2192 identity-provider"
+  },
+  {
+   "id": "c1",
+   "name": "getOrderRail",
+   "container": "OrdersController",
+   "file": "apps/orders-service/src/order.controller.ts",
+   "app": "orders-service",
+   "layer": "controller",
+   "line": 95,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": true
+   },
+   "detail": "GET /orders/rail"
+  },
+  {
+   "id": "x",
+   "name": "identity-provider",
+   "container": null,
+   "file": "",
+   "app": "identity-provider",
+   "layer": "other",
+   "line": 0,
+   "role": "down",
+   "changed": false,
+   "more": {
+    "up": false,
+    "down": false
+   },
+   "detail": "external service (not in this repository)",
+   "external": true
+  }
+ ],
+ "edges": [
+  {
+   "from": "page",
+   "to": "t",
+   "kind": "renders"
+  },
+  {
+   "from": "root",
+   "to": "page",
+   "kind": "renders"
+  },
+  {
+   "from": "t",
+   "to": "rail",
+   "kind": "renders"
+  },
+  {
+   "from": "t",
+   "to": "e1",
+   "kind": "uses",
+   "label": "useGetOrderRailQuery"
+  },
+  {
+   "from": "t",
+   "to": "e2",
+   "kind": "uses",
+   "label": "useInviteUserMutation"
+  },
+  {
+   "from": "e1",
+   "to": "c1",
+   "kind": "http",
+   "label": "GET /orders/rail"
+  },
+  {
+   "from": "e2",
+   "to": "x",
+   "kind": "http",
+   "label": "POST /realms/acme/api/invite-user"
+  }
+ ]
+}
